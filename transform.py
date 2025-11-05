@@ -9,7 +9,7 @@ attendance = 10%
 
 def calculate_final_grade(student):
     dict = load_students_csv(num)
-    quiz_scores = [student[f"quiz{i}"]] for i in range(1, 60)
+    quiz_scores = [student[f"quiz{i}"] for i in range(1, 6)]
 
 
 
