@@ -1,22 +1,25 @@
 from ingest import load_students_csv
 from main import num
+
 """
-quiz = 50%
-midterm = 20%
-final = 20%
-attendance = 10%
+Grading System:
+    Quizzes = 50%
+    Midterm = 20%
+    Final = 20%
+    Attendance = 10%
 """
 
 def calculate_final_grade(student):
-    dict = load_students_csv(num)
     quiz_scores = [student[f"quiz{i}"] for i in range(1, 6)]
-
-
-
-
-
-
-
+    quiz_avg = sum(quiz_scores) / len(quiz_scores)
+    
+    weighted_quiz = quiz_avg * 0.50
+    weighted_midterm = student['midterm'] * 0.20
+    weighted_final = student['final'] * 0.20
+    weighted_attendance = student['attendance_percent'] * 0.10
+    
+    final_grade = weighted_quiz + weighted_midterm + weighted_final + weighted_attendance
+    
     return round(final_grade, 2)
 
 def convert_to_letter_grade(final_grade):
@@ -36,3 +39,20 @@ def convert_to_letter_grade(final_grade):
         return 'D'
     else:
         return 'F'
+        
+        
+def main():
+    final_stud_rec = []
+    stud_rec = load_students_csv()
+
+    for student_id, student in stud_rec.items():
+        final_grade = calculate_final_grade(student)
+        letter_grade = convert_to_letter_grade(final_grade)
+        
+        record_with_grade = student.copy()
+        record_with_grade["final_grade"] = final_grade
+        record_with_grade["letter_grade"] = letter_grade
+        
+        final_stud_rec.append(record_with_grade)
+    
+    return final_stud_rec
