@@ -43,7 +43,7 @@ def convert_to_letter_grade(final_grade):
         
 def main():
     final_stud_rec = []
-    stud_rec = load_students_csv()
+    stud_rec = load_students_csv(num)
 
     for student_id, student in stud_rec.items():
         final_grade = calculate_final_grade(student)

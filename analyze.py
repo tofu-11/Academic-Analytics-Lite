@@ -18,7 +18,7 @@ def calculate_std(grades: List[float]) -> float:
 
 
 def calculate_percentile(grades: List[float], percentile: int) -> float:
-     if not grades:
+    if not grades:
         return 0.0
     sorted_grades = sorted(grades)
     index = (percentile / 100) * (len(sorted_grades) - 1)
