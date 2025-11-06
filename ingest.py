@@ -24,8 +24,6 @@ def list_files():
     for file in folder.iterdir():
         print(i, ". ", file.name)
 
-import csv
-
 def load_students_csv(file_name):
     """Reads a CSV file of students and returns a dictionary grouped by section."""
     student_rec = {}
@@ -68,4 +66,11 @@ def load_students_csv(file_name):
 
     return student_rec
 
-
+def list_sections(file):
+    student_rec = load_students_csv(file)
+    section_list = []
+    i = 0
+    for sec in student_rec.keys():
+        section_list[i] = sec
+        i += 1
+    return section_list
