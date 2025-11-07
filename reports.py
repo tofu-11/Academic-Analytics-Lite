@@ -34,7 +34,7 @@ students = [
         "name": "Ava Santos",
         "section": "BSIT 3B",
         "attendance": "98%",
-        "quiz_1": 95,
+        "quiz_1": 95,  # highest in quiz_1
         "quiz_2": 94,
         "quiz_3": 96,
         "quiz_4": 93,
@@ -46,6 +46,21 @@ students = [
     },
     {
         "student_id": "2024-0004",
+        "name": "Marco Dizon",
+        "section": "BSIT 3B",
+        "attendance": "96%",
+        "quiz_1": 91,
+        "quiz_2": 97,  # highest in quiz_2
+        "quiz_3": 92,
+        "quiz_4": 90,
+        "quiz_5": 91,
+        "midterm": 93,
+        "final_exam": 95,
+        "final_grade": 94.1,
+        "rating": "A"
+    },
+    {
+        "student_id": "2024-0005",
         "name": "Burat Sex",
         "section": "BSIT 3C",
         "attendance": "85%",
@@ -60,7 +75,7 @@ students = [
         "rating": "C"
     },
     {
-        "student_id": "2024-0005",
+        "student_id": "2024-0006",
         "name": "Carlos Dela Cruz",
         "section": "BSIT 3D",
         "attendance": "90%",
@@ -75,7 +90,7 @@ students = [
         "rating": "B"
     },
     {
-        "student_id": "2024-0006",
+        "student_id": "2024-0007",
         "name": "Lara Mendoza",
         "section": "BSIT 3D",
         "attendance": "93%",
@@ -90,7 +105,7 @@ students = [
         "rating": "A"
     },
     {
-        "student_id": "2024-0007",
+        "student_id": "2024-0008",
         "name": "Noel Pascual",
         "section": "BSIT 3D",
         "attendance": "88%",
@@ -103,8 +118,54 @@ students = [
         "final_exam": 84,
         "final_grade": 81.0,
         "rating": "B"
+    },
+    {
+        "student_id": "2024-0009",
+        "name": "Mika Ramos",
+        "section": "BSIT 3E",
+        "attendance": "94%",
+        "quiz_1": 89,
+        "quiz_2": 91,
+        "quiz_3": 98,  # highest in quiz_3
+        "quiz_4": 92,
+        "quiz_5": 90,
+        "midterm": 93,
+        "final_exam": 95,
+        "final_grade": 93.4,
+        "rating": "A"
+    },
+    {
+        "student_id": "2024-0010",
+        "name": "Sean Villanueva",
+        "section": "BSIT 3E",
+        "attendance": "92%",
+        "quiz_1": 87,
+        "quiz_2": 88,
+        "quiz_3": 90,
+        "quiz_4": 97,  # highest in quiz_4
+        "quiz_5": 92,
+        "midterm": 94,
+        "final_exam": 96,
+        "final_grade": 94.2,
+        "rating": "A"
+    },
+    {
+        "student_id": "2024-0011",
+        "name": "Julia Bautista",
+        "section": "BSIT 3C",
+        "attendance": "91%",
+        "quiz_1": 86,
+        "quiz_2": 87,
+        "quiz_3": 89,
+        "quiz_4": 90,
+        "quiz_5": 98,  # highest in quiz_5
+        "midterm": 92,
+        "final_exam": 94,
+        "final_grade": 93.0,
+        "rating": "A"
     }
 ]
+
 
 
 def identify_sections(data_record): #identifying each unique section 
@@ -306,6 +367,8 @@ def generate_txtreport(data_record): #generating the main txt report
                     txt_file.write(f"|{person['student_id']:^17}|{person['name']:^30}|{person['attendance']:^12}|{person['quiz_1']:^5}|{person['quiz_2']:^5}|{person['quiz_3']:^5}|{person['quiz_4']:^5}|{person['quiz_5']:^5}|{person['midterm']:^11}|{person['final_exam']:^12}|{person['final_grade']:^13}|{person['rating']:^8}|{person['status']:^8}|\n")
                     txt_file.write(table_separator + "\n")
 
+        generate_atrisk_table(section,students)
+
 def generate_txt_section_compare_table(data_record):
 
     table_separator = (f"{'_____________ _____ _____ _____ _____ _____ _________ _______ _________'}")
@@ -338,13 +401,29 @@ def generate_txt_section_compare_table(data_record):
             txt_file.write(f"{line:^154}\n")
             txt_file.write(f"{table_separator:^154}\n")
 
+def generate_atrisk_table(section,data_record):
+
+    table_separator = (f"{'_________________ ______________________________ ____________ __________________________________ ___________ ____________ _____________ ________ ________ '}")
+    status_students_report(data_record)
+
+    with open("output.txt", "a") as txt_file:
+        txt_file.write(f"\n{'AT-RISK STUDENTS':^159}\n")
+        txt_file.write(table_separator + "\n")
+        txt_file.write("|   STUDENT ID    |             NAME             | Attendance |  Q1  |  Q2  |  Q3  |  Q4  |  Q5  |  MIDTERM  | FINAL EXAM | FINAL GRADE | RATING | STATUS |\n")
+        txt_file.write(table_separator + "\n")
+
+
+    for person in data_record:
+        if person['section'] == section:
+            if person['final_grade'] < 75:
+                txt_file.write(f"|{person['student_id']:^17}|{person['name']:^30}|{person['attendance']:^12}|{person['quiz_1']:^6}|{person['quiz_2']:^6}|{person['quiz_3']:^6}|{person['quiz_4']:^6}|{person['quiz_5']:^6}|{person['midterm']:^11}|{person['final_exam']:^12}|{person['final_grade']:^13}|{person['rating']:^8}|{person['status']:^8}|\n")
+                txt_file.write(table_separator + "\n")
 
 generate_txtreport(students)
 generate_txt_section_compare_table(students)
 
-section = identify_sections(students)
-
-print(section)
+section = identify_sections(students) #checker
+print(section) #checker
 print("the program runs!!")
 
 
