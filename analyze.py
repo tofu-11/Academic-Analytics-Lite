@@ -1,57 +1,522 @@
-import transform
-import numpy as np
-import matplotlib.pyplot as plt  #
-from scipy.stats import norm
-
-def calculate_mean(grades: List[float]) -> float:
-    """ calculating the means of grades """
-    if not grades:
-        return 0.0
-    return sum(grades)/ len(grades) 
-def calculate_std(grades: List[float]) -> float:
-    """ calcuating the standard deviation of grades"""
-    if len(grades) < 2:
-        return 0.0
-    mean = calculate_mean(grades)
-    variance = sum((x - mean) ** 2 for x in grades / len(grades) - 1) 
-    return variance ** 0.5
-
-
-def calculate_percentile(grades: List[float], percentile: int) -> float:
-    if not grades:
-        return 0.0
-    sorted_grades = sorted(grades)
-    index = (percentile / 100) * (len(sorted_grades) - 1)
-    lower = int(index)
-    upper = lower + 1
-    
-    if upper >= len(sorted_grades):
-        return sorted_grades[-1]
-    
-    weight = index - lower
-    return sorted_grades[lower] * (1 - weight) + sorted_grades[upper] * weight
-
-
 """
-def find_outliers
+analyze.py - zachary - Student Performance Analytics
 
-def calculate_distribution_stats
+analyzes student grade data from transform.py
+then returns structured data for reports.py to visualize
 
-def plot_grade_distribution
+FEATURES:
+1 - Distributions (letter grades, score ranges)
+2 - Percentiles (Q1, Median, Q3)
+3 - Outliers (high/low performers)
+4 - Improvements (compare 2 CSV files by DATE)
+5 - Bell Curve (STRETCH FEATURE)
+6 - NumPy optimized versions (STRETCH FEATURE)
+6 - Compare (WIP)
 
-def plot_box_pilot
-
-def identify_improvements
-    
-    Identify students showing improvement across quizzes
-    quiz_grades: list of grade lists [quiz1_grades, quiz2_grades, ...]
-    Returns list of improvement metrics
-    
+NOTE: This part (analyze.py) ONLY returns analyzed data.
+      reports.py is the one that handles plotting/visualization(output).
 """
 
+import math
 
-x = np.linspace(mean - 4 * std, mean + 4 * std, 1000)  
-y = norm(loc=mean, scale=std).pdf(x)
+# NumPy support for our stretch features, numpy is basically for optimization and process data way way faster than ordinary
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    print("ERROR!: NumPy is not available. using standard library.") ##handling when numpy is not available, use standard as backup 
 
-plt.plot(x, y, c="blue")  
-plt.show()
+
+# ==================== DISTRIBUTIONS ====================
+
+def get_letter_distribution(student_records):
+    """
+    D: counts how many students got each letter grade.
+    
+    REQUIRES: student_records from transform.py with 'letter_grade' key -> carlos branch
+    RETURNS: dict with letter grade counts
+    """
+    distribution = {'S': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'F': 0}
+    
+    for student in student_records:
+        grade = student.get('letter_grade', 'F')
+        distribution[grade] += 1
+    
+    return distribution
+
+
+def get_score_ranges(student_records):
+    """
+    D: group scores into ranges: 0-59, 60-69, 70-79, 80-89, 90-100
+    
+    REQUIRES: student_records from transform.py with 'final_grade' key -> carlos branch
+    RETURNS: dict with score range counts
+    """
+    ranges = {
+        '0-59 (F)': 0,
+        '60-69 (D)': 0,
+        '70-79 (C)': 0,
+        '80-89 (B)': 0,
+        '90-100 (A/S)': 0
+    }
+    
+    for student in student_records:
+        score = student.get('final_grade')
+        if score is None:
+            continue
+            
+        if score < 60:
+            ranges['0-59 (F)'] += 1
+        elif score < 70:
+            ranges['60-69 (D)'] += 1
+        elif score < 80:
+            ranges['70-79 (C)'] += 1
+        elif score < 90:
+            ranges['80-89 (B)'] += 1
+        else:
+            ranges['90-100 (A/S)'] += 1
+    
+    return ranges
+
+
+# ==================== PERCENTILES ====================
+
+def calculate_percentile(student_records, percentile):
+    """
+    Find the score at a given percentile.
+    Example: percentile=75 means 75% of students scored below this.
+    
+    REQUIRES: student_records from transform.py with 'final_grade' key -> carlos
+    RETURNS: float score at percentile
+
+    how the algorithm works
+    # Step by step:
+    # 1. Extract: [85, 92, 78, 65, 88]
+    # 2. Sort: [65, 78, 85, 88, 92]
+    # 3. Calculate: (75/100) * 5 = 3.75 → int = 3
+    # 4. grades[3] = 88
+    # Result: 88.0 (75% of students scored below 88)
+    """
+    grades = [s['final_grade'] for s in student_records 
+             if s.get('final_grade') is not None]
+    
+    if not grades:
+        return 0
+    
+    grades.sort()
+    index = int((percentile / 100) * len(grades))
+    if index >= len(grades):            #safety check, guardrail to make sure its the valid position
+        index = len(grades) - 1
+    
+    return round(grades[index], 2)
+
+
+def get_common_percentiles(student_records):
+    """
+    Get 25th, 50th (median), and 75th percentiles.
+    
+    REQUIRES: student_records from transform.py with 'final_grade' key -> carlso branch
+    RETURNS: dict with Q1, Median, Q3
+    """
+    return {
+        '25th (Q1)': calculate_percentile(student_records, 25),
+        '50th (Median)': calculate_percentile(student_records, 50),
+        '75th (Q3)': calculate_percentile(student_records, 75)
+    }
+
+
+# ==================== OUTLIERS ====================
+
+def find_outliers(student_records):
+    """
+    D: find students with unusually high or low grades.
+    uses the standard IQR method: outliers are 1.5 * IQR away from Q1/Q3
+    
+    REQUIRES: student_records from transform.py with 'final_grade', 'student_id', 'first_name', 'last_name' -> carlos branch
+    RETURNS: list of dicts with outlier student info
+    """
+    grades = [s['final_grade'] for s in student_records 
+              if s.get('final_grade') is not None]
+    
+    if len(grades) < 4:
+        return []
+    
+    grades.sort()
+    
+    # Calculate quartiles
+    q1_index = len(grades) // 4
+    q3_index = 3 * len(grades) // 4
+    q1 = grades[q1_index]
+    q3 = grades[q3_index]
+    
+    iqr = q3 - q1
+    lower_bound = q1 - 1.5 * iqr
+    upper_bound = q3 + 1.5 * iqr
+    
+    # Find outlier students
+    outliers = []
+    for student in student_records:
+        grade = student.get('final_grade')
+        if grade is None:
+            continue
+            
+        if grade < lower_bound or grade > upper_bound:
+            outlier_info = {
+                'student_id': student['student_id'],
+                'name': f"{student['first_name']} {student['last_name']}",
+                'section': student.get('section', 'N/A'),
+                'grade': grade,
+                'type': 'low performer' if grade < lower_bound else 'high performer'
+            }
+            outliers.append(outlier_info)
+    
+    return outliers
+
+
+# ==================== IMPROVEMENTS (2 CSV COMPARISON BY DATE) ====================
+
+def compare_by_date(date_a_records, date_b_records, date_a_label="Date A", date_b_label="Date B"):
+    """
+    D: compare student grades between 2 different dates (2 CSV files).
+    matches students by student_id.
+    
+    REQUIRES: 
+        - date_a_records: list from transform.py (earlier date) CSV A
+        - date_b_records: list from transform.py (later date) CSV B
+        - soon if abot: CSV that combines both or all. medjo complex nga lang to
+        - Both must have: student_id, first_name, last_name, final_grade, section -> carlos branch
+    
+    RETURNS: dict with 3 keys:
+        - 'matched': list of students found in BOTH files with improvement status
+        - 'incomplete_a': students only in Date A (dropped out or missing from Date B)
+        - 'incomplete_b': students only in Date B (new students or missing from Date A)
+    """
+    
+    # Create lookup dictionaries by student_id
+    date_a_dict = {}
+    for student in date_a_records:
+        sid = student.get('student_id')
+        if sid:
+            date_a_dict[sid] = student
+    
+    date_b_dict = {}
+    for student in date_b_records:
+        sid = student.get('student_id')
+        if sid:
+            date_b_dict[sid] = student
+    
+    # results structure
+    matched = []
+    incomplete_a = []  # Students that are in A but not in B
+    incomplete_b = []  # Students that are in B but not in A
+    
+    # find matched students (in both dates)
+    for sid in date_a_dict:
+        if sid in date_b_dict:
+            student_a = date_a_dict[sid]
+            student_b = date_b_dict[sid]
+            
+            grade_a = student_a.get('final_grade')
+            grade_b = student_b.get('final_grade')
+            
+            if grade_a is not None and grade_b is not None:
+                change = grade_b - grade_a
+                
+                # category of improvement based on latest date (Date B)
+                if change > 10:
+                    status = 'strong improvement'
+                elif change > 3:
+                    status = 'improving'
+                elif change >= -3:
+                    status = 'stable'
+                elif change > -10:
+                    status = 'declining'
+                else:
+                    status = 'strong decline'
+                
+                matched.append({
+                    'student_id': sid,
+                    'name': f"{student_b.get('first_name', '')} {student_b.get('last_name', '')}".strip(),
+                    'section': student_b.get('section', 'N/A'),
+                    f'{date_a_label}_grade': round(grade_a, 2),
+                    f'{date_b_label}_grade': round(grade_b, 2),
+                    'change': round(change, 2),
+                    'status': status
+                })
+    
+    # fnid students only in Date A (incomplete in B)
+    for sid in date_a_dict:
+        if sid not in date_b_dict:
+            student = date_a_dict[sid]
+            incomplete_a.append({
+                'student_id': sid,
+                'name': f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
+                'section': student.get('section', 'N/A'),
+                'grade': student.get('final_grade'),
+                'reason': f'Missing in {date_b_label}'
+            })
+    
+    # find students only in Date B (incomplete in A / new students)
+    for sid in date_b_dict:
+        if sid not in date_a_dict:
+            student = date_b_dict[sid]
+            incomplete_b.append({
+                'student_id': sid,
+                'name': f"{student.get('first_name', '')} {student.get('last_name', '')}".strip(),
+                'section': student.get('section', 'N/A'),
+                'grade': student.get('final_grade'),
+                'reason': f'Missing in {date_a_label} (New student or transfer)'
+            })
+    
+    return {
+        'matched': matched,
+        'incomplete_a': incomplete_a,
+        'incomplete_b': incomplete_b,
+        'summary': {
+            'total_matched': len(matched),
+            'total_incomplete_a': len(incomplete_a),
+            'total_incomplete_b': len(incomplete_b),
+            'improving_count': sum(1 for s in matched if 'improv' in s['status']),
+            'declining_count': sum(1 for s in matched if 'declin' in s['status']),
+            'stable_count': sum(1 for s in matched if s['status'] == 'stable')
+        }
+    }
+
+"""         WAIT TENTATIVE!!!
+def get_improvement_by_section(comparison_result):
+    
+    D: break down improvements by section.
+    
+    REQUIRES: comparison_result from compare_by_date()
+    RETURNS: dict with section-wise improvement breakdown
+    
+    sections = {}
+    
+    for student in comparison_result['matched']:
+        section = student['section']
+        if section not in sections:
+            sections[section] = {
+                'strong improvement': 0,
+                'improving': 0,
+                'stable': 0,
+                'declining': 0,
+                'strong decline': 0,
+                'total': 0
+            }
+        
+        status = student['status']
+        sections[section][status] += 1
+        sections[section]['total'] += 1
+    
+    return sections
+"""
+
+# ==================== BELL CURVE (GRADE CURBVE STRETCH FEATURE) ====================
+
+def apply_curve(student_records, target_average=75):
+    """
+    D: apply bell curve to adjust grades so class average = target_average.
+    usingses simple additive curve: adds/subtracts same amount to all grades.
+    
+    REQUIRES: student_records from transform.py with 'final_grade' key -> carlos branch
+    RETURNS: student_records with added 'curved_grade' and 'curved_letter' keys -> gives the info to cris branch
+    """
+    grades = [s['final_grade'] for s in student_records
+             if s.get('final_grade') is not None]
+    
+    if not grades:
+        return student_records
+    
+    # calculate current average/mean
+    current_avg = sum(grades) / len(grades)
+    
+    # how much to add to each grade
+    adjustment = target_average - current_avg
+    
+    # apply curve to each student
+    for student in student_records:
+        if student.get('final_grade') is None:
+            continue
+            
+        curved = student['final_grade'] + adjustment
+        
+        # Keep grades between 0-100
+        curved = max(0, min(100, curved))
+        
+        student['curved_grade'] = round(curved, 2)
+        
+        # Recalculate each letter grade
+        if curved >= 97:
+            student['curved_letter'] = 'S'
+        elif curved >= 90:
+            student['curved_letter'] = 'A'
+        elif curved >= 85:
+            student['curved_letter'] = 'B'
+        elif curved >= 75:
+            student['curved_letter'] = 'C'
+        elif curved >= 70:
+            student['curved_letter'] = 'D'
+        else:
+            student['curved_letter'] = 'F'
+    
+    return student_records
+
+
+def get_curve_stats(student_records):
+    """
+    D: Get before/after statistics for curved grades.
+    
+    REQUIRES: student_records with 'final_grade' and 'curved_grade' keys -> CARLOS BRANCH and Apply_Curve Function
+    RETURNS: dict with before/after comparison stats
+    """
+    original_grades = [s['final_grade'] for s in student_records 
+                    if s.get('final_grade') is not None]
+    curved_grades = [s['curved_grade'] for s in student_records 
+                     if s.get('curved_grade') is not None]
+    
+    if not curved_grades:   #handling
+        return {'error': 'there are no curved grades found. Run apply_curve() first.'}
+    
+    return {
+        'before': {
+            'average': round(sum(original_grades) / len(original_grades), 2),
+            'highest': round(max(original_grades), 2),
+            'lowest': round(min(original_grades), 2)
+        },
+        'after': {
+            'average': round(sum(curved_grades) / len(curved_grades), 2),
+            'highest': round(max(curved_grades), 2),
+            'lowest': round(min(curved_grades), 2)
+        },
+        'adjustment': round((sum(curved_grades) / len(curved_grades)) - (sum(original_grades) / len(original_grades)), 2)
+    }
+
+
+# ==================== NUMPY VERSIONS (STRETCH FEATURE) ====================
+
+def get_basic_stats_numpy(student_records):
+    """
+    D: calculate statistics using NumPy (faster for large datasets if we have a lot of students).
+    
+    REQUIRES: ⚠️⚠️NumPy installed⚠️⚠️ <---, student_records with 'final_grade'
+    RETURNS: dict with mean, median, std, min, max, Q1, Q3
+    """
+    if not NUMPY_AVAILABLE:
+        print(" NumPy not available. Using standard version instead.")
+        return get_basic_stats(student_records)
+    
+    grades = np.array([s['final_grade'] for s in student_records 
+                      if s.get('final_grade') is not None])
+    
+    if len(grades) == 0:
+        return {}
+    
+    return {
+        'count': len(grades),
+        'mean': round(float(np.mean(grades)), 2),
+        'median': round(float(np.median(grades)), 2),
+        'std': round(float(np.std(grades, ddof=1)), 2),
+        'min': round(float(np.min(grades)), 2),
+        'max': round(float(np.max(grades)), 2),
+        'q1': round(float(np.percentile(grades, 25)), 2),
+        'q3': round(float(np.percentile(grades, 75)), 2),
+        'iqr': round(float(np.percentile(grades, 75) - np.percentile(grades, 25)), 2)
+    }
+
+
+def apply_curve_numpy(student_records, target_average=75):
+    """
+    D: NumPy-optimized version of bell curve. if NumPy is installed
+    
+    REQUIRES: NumPy installed, student_records with 'final_grade'
+    RETURNS: student_records with 'curved_grade' and 'curved_letter'
+    """
+    if not NUMPY_AVAILABLE:
+        print("⚠️ NumPy not available. Using standard version instead.")
+        return apply_curve(student_records, target_average)
+    
+    # Extract grades as numpy array
+    grades_list = [s.get('final_grade', 0) for s in student_records]
+    grades = np.array(grades_list)
+    valid_mask = np.array([s.get('final_grade') is not None for s in student_records])
+    
+    if not np.any(valid_mask):
+        return student_records
+    
+    # Calculate adjustment
+    current_avg = np.mean(grades[valid_mask])
+    adjustment = target_average - current_avg
+    
+    # Apply curve using numpy
+    curved_grades = np.clip(grades + adjustment, 0, 100)
+    
+    # Update records
+    for i, student in enumerate(student_records):
+        if valid_mask[i]:
+            curved = float(curved_grades[i])
+            student['curved_grade'] = round(curved, 2)
+            
+            # Letter grade
+            if curved >= 97:
+                student['curved_letter'] = 'S'
+            elif curved >= 90:
+                student['curved_letter'] = 'A'
+            elif curved >= 85:
+                student['curved_letter'] = 'B'
+            elif curved >= 75:
+                student['curved_letter'] = 'C'
+            elif curved >= 70:
+                student['curved_letter'] = 'D'
+            else:
+                student['curved_letter'] = 'F'
+    
+    return student_records
+
+
+# ==================== BASIC STATS (STANDARD VERSION) ====================
+
+def get_basic_stats(student_records):
+    """
+    D: calculate simple statistics about the class.
+    
+    REQUIRES: student_records from transform.py with 'final_grade'
+    RETURNS: dict with count, average, highest, lowest, median, passing, failing
+    """
+    grades = [s['final_grade'] for s in student_records if s.get('final_grade') is not None]
+    
+    if not grades:
+        return {}
+    
+    grades.sort()
+    
+    return {
+        'count': len(grades),
+        'average': round(sum(grades) / len(grades), 2),
+        'highest': round(max(grades), 2),
+        'lowest': round(min(grades), 2),
+        'median': round(grades[len(grades) // 2], 2),
+        'passing': sum(1 for g in grades if g >= 70),
+        'failing': sum(1 for g in grades if g < 70)
+    }
+
+
+# ==================== FULL ANALYSIS (ALL-IN-ONE) ====================
+
+def analyze_all(student_records):
+    """
+    D:run all analyses and return results in one dictionary.
+    this is what reports.py will call to get all data.
+    
+    REQUIRES: student_records from transform.py
+    RETURNS: dict with all analysis results
+    """
+    return {
+        'basic_stats': get_basic_stats(student_records),
+        'letter_distribution': get_letter_distribution(student_records),
+        'score_ranges': get_score_ranges(student_records),
+        'percentiles': get_common_percentiles(student_records),
+        'outliers': find_outliers(student_records)
+    }
+
+
