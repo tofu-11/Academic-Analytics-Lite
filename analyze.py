@@ -18,7 +18,8 @@ NOTE: This part (analyze.py) ONLY returns analyzed data.
 """
 
 import math
-
+import copy
+from collections import Counter
 # NumPy support for our stretch features, numpy is basically for optimization and process data way way faster than ordinary
 try:
     import numpy as np
@@ -81,6 +82,23 @@ def get_score_ranges(student_records):
 
 
 # ==================== PERCENTILES ====================
+
+def percentile_of_score(scores, target_score):
+    """
+    Returns the percentile rank of a specific score in a list of scores.
+    
+    Percentile rank = percentage of scores less than or equal to the target.
+    """
+    if not scores:
+        raise ValueError("The scores list is empty.")
+    
+    scores_sorted = sorted(scores)
+    count_below = sum(1 for s in scores_sorted if s < target_score)
+    count_equal = sum(1 for s in scores_sorted if s == target_score)
+    
+    # Percentile formula: ((below + 0.5 * equal) / total) * 100
+    percentile = ((count_below + 0.5 * count_equal) / len(scores_sorted)) * 100
+    return percentile
 
 def calculate_percentile(student_records, percentile):
     """
@@ -164,9 +182,11 @@ def find_outliers(student_records):
         if grade < lower_bound or grade > upper_bound:
             outlier_info = {
                 'student_id': student['student_id'],
-                'name': f"{student['first_name']} {student['last_name']}",
+                'last_name' : student['last_name'],
+                'first_name': student['first_name'],
                 'section': student.get('section', 'N/A'),
-                'grade': grade,
+                'final_grade': grade,
+                'letter_grade': student['letter_grade'],
                 'type': 'low performer' if grade < lower_bound else 'high performer'
             }
             outliers.append(outlier_info)
@@ -395,27 +415,24 @@ def get_curve_stats(student_records):
 
 # ==================== NUMPY VERSIONS (STRETCH FEATURE) ====================
 
-def get_basic_stats_numpy(student_records):
+def get_basic_stats_numpy(section, section_name):
     """
     D: calculate statistics using NumPy (faster for large datasets if we have a lot of students).
     
     REQUIRES: ⚠️⚠️NumPy installed⚠️⚠️ <---, student_records with 'final_grade'
     RETURNS: dict with mean, median, std, min, max, Q1, Q3
     """
-    if not NUMPY_AVAILABLE:
-        print(" NumPy not available. Using standard version instead.")
-        return get_basic_stats(student_records)
     
-    grades = np.array([s['final_grade'] for s in student_records 
-                      if s.get('final_grade') is not None])
+    stats_out = {}
     
-    if len(grades) == 0:
-        return {}
-    
-    return {
-        'count': len(grades),
+    grades = [student["final_grade"]
+                    for student in section.values()]
+    counts = Counter(grades)
+    stats_out = {
+        'section': section_name,
         'mean': round(float(np.mean(grades)), 2),
         'median': round(float(np.median(grades)), 2),
+        'mode' : counts.most_common(1)[0][0],
         'std': round(float(np.std(grades, ddof=1)), 2),
         'min': round(float(np.min(grades)), 2),
         'max': round(float(np.max(grades)), 2),
@@ -423,6 +440,11 @@ def get_basic_stats_numpy(student_records):
         'q3': round(float(np.percentile(grades, 75)), 2),
         'iqr': round(float(np.percentile(grades, 75) - np.percentile(grades, 25)), 2)
     }
+
+
+    return stats_out
+
+
 
 
 def apply_curve_numpy(student_records, target_average=75):
@@ -474,6 +496,9 @@ def apply_curve_numpy(student_records, target_average=75):
     return student_records
 
 
+
+
+
 # ==================== BASIC STATS (STANDARD VERSION) ====================
 
 def get_basic_stats(student_records):
@@ -520,3 +545,127 @@ def analyze_all(student_records):
     }
 
 
+def analyze_report_output(student_records):
+    """
+    Analyze student records and add percentile information
+    
+    Expected input structure:
+    {
+        'section_name': {
+            'student_id': {
+                'first_name': str,
+                'last_name': str,
+                'quiz_1': float,
+                'quiz_2': float,
+                'quiz_3': float,
+                'quiz_4': float,
+                'quiz_5': float,
+                'midterm': float,
+                'final_exam': float,
+                'attendance': float,
+                'final_grade': float,
+                'letter_grade': str
+            }
+        }
+    }
+    """
+    if not student_records:
+        return {}
+        
+    updated_out = copy.deepcopy(student_records)
+
+    for section in updated_out.keys():
+        # Get all valid final grades for the section
+        final_grades = [
+            student.get("final_grade") 
+            for student in updated_out[section].values() 
+            if student.get("final_grade") is not None
+        ]
+        
+        # Calculate percentile and set status for each student
+        for student in updated_out[section].values():
+            final_grade = student.get("final_grade")
+            
+            if final_grade is not None:
+                student["percentile"] = round(percentile_of_score(final_grades, final_grade), 2)
+                student["status"] = "valid"
+                student["rating"] = student["letter_grade"]  # Use letter_grade as rating
+            else:
+                student["percentile"] = None
+                student["status"] = "invalid"
+                student["rating"] = "N/A"
+    
+    return updated_out
+
+"""stud_rec = {
+    '(section name)':
+        {'(Student_ID)':
+            {'last_name': None,
+             'first_name': None,
+             'quiz 1': None,
+             'quiz 2': None,
+             'quiz 3': None,
+             'quiz 4': None,
+             'quiz 5': None, 
+             'midterms': None,
+             'finals': None,
+             'attendance': None,
+             'final_grade':None,
+             'letter_grade': None,
+             'percentile': None,
+             'status': '(valid/invalid)'}}}
+"""
+
+def improvements_output(dict1, dict2):
+    diff = {}
+
+    for section in dict2:
+        diff[section] = {}
+
+        # handle all students that appear in either dictionary
+        all_students = set(dict1.get(section, {}).keys()) | set(dict2.get(section, {}).keys())
+
+        for student_id in all_students:
+            diff[section][student_id] = {}
+
+            stud1 = dict1.get(section, {}).get(student_id)
+            stud2 = dict2.get(section, {}).get(student_id)
+
+            # If student not present in both -> invalid
+            if not stud1 or not stud2:
+                diff[section][student_id]["status"] = "invalid"
+                continue
+
+            # Copy identifying fields
+            diff[section][student_id]["last_name"] = stud2.get("last_name")
+            diff[section][student_id]["first_name"] = stud2.get("first_name")
+
+            # Compute numeric differences for each score-related key
+            for key, val2 in stud2.items():
+                if key in ["last_name", "first_name", "status"]:
+                    continue
+
+                val1 = stud1.get(key)
+                if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
+                    diff_val = val2 - val1
+                    diff[section][student_id][key] = f"{'+' if diff_val > 0 else ''}{diff_val}"
+                else:
+                    # For non-numeric or missing fields, just copy the latest value
+                    diff[section][student_id][key] = None
+
+            diff[section][student_id]["status"] = "valid"
+
+    return diff
+
+def compare_output(stats_dict):
+    # Sort the items (section, stats) by mean value descending
+    sorted_items = sorted(
+        stats_dict.items(),
+        key=lambda item: item[1]['mean'],
+        reverse=True
+    )
+    
+    # Convert back to dictionary to preserve sorted order
+    sorted_dict = {section: stats for section, stats in sorted_items}
+    
+    return sorted_dict

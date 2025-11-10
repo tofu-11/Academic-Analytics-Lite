@@ -10,19 +10,15 @@ data_dir = base_dir / config["data_dir"]
 data_dir.mkdir(exist_ok=True)
 
 file_list = []
-i = 0
 folder = Path(data_dir)
 for file in folder.iterdir():
-    file_list[i] = file
-    i += 1
-
-def return_list():
-    return file_list
+    file_list.append(file)
 
 def list_files():
     i = 1
     for file in folder.iterdir():
         print(i, ". ", file.name)
+        i += 1
 
 def load_students_csv(file_name):
     """Reads a CSV file of students and returns a dictionary grouped by section."""
@@ -41,21 +37,33 @@ def load_students_csv(file_name):
             student_id = row["student_id"].strip()
 
             # Convert numeric fields to floats or None
-            for key in ["quiz1", "quiz2", "quiz3", "quiz4", "quiz5", "midterm", "final", "attendance_percent"]:
-                value = row.get(key, "").strip()
+            # Map the CSV column names to our standardized keys
+            field_mapping = {
+                "quiz1": "quiz_1", "quiz2": "quiz_2", "quiz3": "quiz_3", 
+                "quiz4": "quiz_4", "quiz5": "quiz_5",
+                "midterm": "midterm", "final": "final_exam",
+                "attendance_percent": "attendance"
+            }
+            
+            for csv_key, internal_key in field_mapping.items():
+                value = row.get(csv_key, "").strip()
                 
                 if value == "":
-                    row[key] = None
+                    row[internal_key] = None
                 else:
                     try:
                         score = float(value)
                         # Clamp scores between 0 and 100
                         if 0 <= score <= 100:
-                            row[key] = score
+                            row[internal_key] = score
                         else:
-                            row[key] = None
+                            row[internal_key] = None
                     except ValueError:
-                        row[key] = None
+                        row[internal_key] = None
+                
+                # Remove the old key if it exists
+                if csv_key in row and csv_key != internal_key:
+                    del row[csv_key]
 
             # Create section key if not exists
             if section not in student_rec:
@@ -69,8 +77,6 @@ def load_students_csv(file_name):
 def list_sections(file):
     student_rec = load_students_csv(file)
     section_list = []
-    i = 0
     for sec in student_rec.keys():
-        section_list[i] = sec
-        i += 1
+        section_list.append(sec)
     return section_list

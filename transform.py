@@ -1,5 +1,4 @@
 from ingest import load_students_csv
-from main import num
 
 """
 Grading System:
@@ -10,22 +9,30 @@ Grading System:
 """
 
 def calculate_final_grade(student):
-    quiz_scores = [student[f"quiz{i}"] for i in range(1, 6)]
+    quiz_scores = [student[f"quiz_{i}"] for i in range(1, 6) if student.get(f"quiz_{i}") is not None]
+    if not quiz_scores:
+        return None
     quiz_avg = sum(quiz_scores) / len(quiz_scores)
     
+    # Check if required fields exist and are not None
+    if any(student.get(field) is None for field in ['midterm', 'final_exam', 'attendance']):
+        return None
+        
     weighted_quiz = quiz_avg * 0.50
     weighted_midterm = student['midterm'] * 0.20
-    weighted_final = student['final'] * 0.20
-    weighted_attendance = student['attendance_percent'] * 0.10
+    weighted_final = student['final_exam'] * 0.20
+    weighted_attendance = student['attendance'] * 0.10
     
     final_grade = weighted_quiz + weighted_midterm + weighted_final + weighted_attendance
     
     return round(final_grade, 2)
 
 def convert_to_letter_grade(final_grade):
+    if final_grade is None:
+        return 'N/A'
     
     if not (0 <= final_grade <= 100):
-        raise ValueError("Grade must be between 0 and 100")
+        return 'N/A'
 
     if final_grade >= 97:
         return 'S'
@@ -40,19 +47,35 @@ def convert_to_letter_grade(final_grade):
     else:
         return 'F'
         
-        
-def main():
-    final_stud_rec = []
-    stud_rec = load_students_csv(num)
+def for_improvements(file):
+    stud_rec = load_students_csv(file)   # {section: {student_id: student_dict}}
 
-    for student_id, student in stud_rec.items():
-        final_grade = calculate_final_grade(student)
-        letter_grade = convert_to_letter_grade(final_grade)
-        
-        record_with_grade = student.copy()
-        record_with_grade["final_grade"] = final_grade
-        record_with_grade["letter_grade"] = letter_grade
-        
-        final_stud_rec.append(record_with_grade)
+    for section in stud_rec.keys():
+        for student_id, student_data in stud_rec[section].items():
+            final_grade = calculate_final_grade(student_data)
+            student_data['final_grade'] = final_grade
+            student_data['letter_grade'] = convert_to_letter_grade(final_grade)
     
-    return final_stud_rec
+    return stud_rec
+
+
+        
+def main(file_path):
+    """
+    Load sectioned student records, compute final & letter grades for each student,
+    insert them into each student's dict under keys "final grade" and "letter grade",
+    and return the updated sectioned dictionary.
+
+    Input format expected:
+      { "BSIT 1-2": { "2021001": { ...student fields... }, ... }, ... }
+    """
+    stud_rec = load_students_csv(file_path)   # {section: {student_id: student_dict}}
+
+    for section in stud_rec.keys():
+        for student_id, student_data in stud_rec[section].items():
+            final_grade = calculate_final_grade(student_data)
+            student_data['final_grade'] = final_grade
+            student_data['letter_grade'] = convert_to_letter_grade(final_grade)
+    
+    return stud_rec
+
