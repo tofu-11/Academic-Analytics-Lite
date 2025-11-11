@@ -22,7 +22,7 @@ while True:
 
         if choice == "1":
             ingest.list_files()
-            test = input()
+            
         
         elif choice == "2":
             print("Which file?")
@@ -55,6 +55,7 @@ while True:
                 ingest.list_files()
                 num = int(input())
                 file_choice.append(file_list[num-1])
+            
             reports.improvement_output(file_choice)
             
         elif choice == "5":
@@ -62,4 +63,6 @@ while True:
             break
         else:
             print("\nInvalid choice. Please try again.")
+        
+        enter = input("\nPress Enter to continue...")
 

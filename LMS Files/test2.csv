@@ -1,0 +1,6 @@
+student_id,last_name,first_name,section,quiz1,quiz2,quiz3,quiz4,quiz5,midterm,final,attendance_percent
+2025001,Dela Cruz,Juan,BSIT 2-1,18,19,17,20,16,88,91,98
+2025002,Santos,Maria,BSIT 2-1,15,17,18,19,20,83,86,100
+2025003,Reyes,Paolo,BSIT 2-2,13,14,15,16,17,74,79,88
+2025004,Garcia,Lara,BSIT 2-2,19,20,20,19,18,92,95,100
+2025005,Lopez,Mark,BSIT 2-3,14,16,15,17,18,80,82,92

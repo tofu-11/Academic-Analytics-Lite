@@ -71,7 +71,7 @@ def load_students_csv(file_name):
 
             # Add student to the section
             student_rec[section][student_id] = row
-
+    
     return student_rec
 
 def list_sections(file):

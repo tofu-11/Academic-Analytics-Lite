@@ -654,6 +654,7 @@ def improvements_output(dict1, dict2):
                     diff[section][student_id][key] = None
 
             diff[section][student_id]["status"] = "valid"
+            diff[section][student_id]["letter_grade"] = stud2.get("letter_grade")
 
     return diff
 

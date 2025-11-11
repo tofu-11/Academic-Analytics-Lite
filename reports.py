@@ -143,7 +143,7 @@ def improvement_output(file_choices):
                       f"{student['final_exam']:^12}|"
                       f"{student['attendance']:^12}|"
                       f"{student['final_grade']:^13}|"
-                      f"{student['rating']:^8}|"
+                      f"{student['letter_grade']:^8}|"
                       f"{student['percentile']:^12}|\n")
                 print(table_separator)
 

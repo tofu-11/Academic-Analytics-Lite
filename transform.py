@@ -12,20 +12,23 @@ def calculate_final_grade(student):
     quiz_scores = [student[f"quiz_{i}"] for i in range(1, 6) if student.get(f"quiz_{i}") is not None]
     if not quiz_scores:
         return None
-    quiz_avg = sum(quiz_scores) / len(quiz_scores)
-    
-    # Check if required fields exist and are not None
+
+    # Convert quiz scores (out of 20) to percentage
+    quiz_avg = (sum(quiz_scores) / len(quiz_scores)) / 20 * 100
+
+    # Check for missing data
     if any(student.get(field) is None for field in ['midterm', 'final_exam', 'attendance']):
         return None
-        
+
     weighted_quiz = quiz_avg * 0.50
     weighted_midterm = student['midterm'] * 0.20
     weighted_final = student['final_exam'] * 0.20
     weighted_attendance = student['attendance'] * 0.10
-    
+
     final_grade = weighted_quiz + weighted_midterm + weighted_final + weighted_attendance
-    
+
     return round(final_grade, 2)
+
 
 def convert_to_letter_grade(final_grade):
     if final_grade is None:
@@ -76,6 +79,8 @@ def main(file_path):
             final_grade = calculate_final_grade(student_data)
             student_data['final_grade'] = final_grade
             student_data['letter_grade'] = convert_to_letter_grade(final_grade)
+    
+    print(stud_rec)
     
     return stud_rec
 
