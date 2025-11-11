@@ -28,13 +28,21 @@ while True:
         elif choice == "2":
             print("Which file?")
             ingest.list_files()
-            num = int(input())
+            try:
+                num = int(input())
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+                continue
             reports.analysis_report_output(file_list[num-1])
 
         elif choice == "3":
             print("Which file?")
             ingest.list_files()
-            num = int(input())
+            try:
+                num = int(input())
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+                continue
             print("Which sections?")
             section_choice = []
             section_list = ingest.list_sections(file_list[num-1])
