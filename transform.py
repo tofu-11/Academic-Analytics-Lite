@@ -51,15 +51,26 @@ def convert_to_letter_grade(final_grade):
         return 'F'
         
 def for_improvements(file):
-    stud_rec = load_students_csv(file)   # {section: {student_id: student_dict}}
+    """Load students from CSV file and calculate grades"""
+    try:
+        # Convert Path object to string if needed
+        file_path = str(file) if not isinstance(file, str) else file
+        stud_rec = load_students_csv(file_path)   # {section: {student_id: student_dict}}
+        
+        if not isinstance(stud_rec, dict):
+            print(f"Error: load_students_csv returned {type(stud_rec).__name__} instead of dict")
+            return {}
 
-    for section in stud_rec.keys():
-        for student_id, student_data in stud_rec[section].items():
-            final_grade = calculate_final_grade(student_data)
-            student_data['final_grade'] = final_grade
-            student_data['letter_grade'] = convert_to_letter_grade(final_grade)
-    
-    return stud_rec
+        for section in stud_rec.keys():
+            for student_id, student_data in stud_rec[section].items():
+                final_grade = calculate_final_grade(student_data)
+                student_data['final_grade'] = final_grade
+                student_data['letter_grade'] = convert_to_letter_grade(final_grade)
+        
+        return stud_rec
+    except Exception as e:
+        print(f"Error in for_improvements: {e}")
+        return {}
 
 
         
@@ -72,15 +83,23 @@ def main(file_path):
     Input format expected:
       { "BSIT 1-2": { "2021001": { ...student fields... }, ... }, ... }
     """
-    stud_rec = load_students_csv(file_path)   # {section: {student_id: student_dict}}
+    try:
+        # Convert Path object to string if needed
+        file_path_str = str(file_path) if not isinstance(file_path, str) else file_path
+        stud_rec = load_students_csv(file_path_str)   # {section: {student_id: student_dict}}
+        
+        if not isinstance(stud_rec, dict):
+            print(f"Error: load_students_csv returned {type(stud_rec).__name__} instead of dict")
+            return {}
 
-    for section in stud_rec.keys():
-        for student_id, student_data in stud_rec[section].items():
-            final_grade = calculate_final_grade(student_data)
-            student_data['final_grade'] = final_grade
-            student_data['letter_grade'] = convert_to_letter_grade(final_grade)
-    
-    print(stud_rec)
-    
-    return stud_rec
+        for section in stud_rec.keys():
+            for student_id, student_data in stud_rec[section].items():
+                final_grade = calculate_final_grade(student_data)
+                student_data['final_grade'] = final_grade
+                student_data['letter_grade'] = convert_to_letter_grade(final_grade)
+        
+        return stud_rec
+    except Exception as e:
+        print(f"Error in transform.main: {e}")
+        return {}
 

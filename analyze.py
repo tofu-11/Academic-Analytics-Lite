@@ -617,23 +617,41 @@ def analyze_report_output(student_records):
 """
 
 def improvements_output(dict1, dict2):
+    """
+    Compare two student datasets and calculate differences.
+    Adds percentile information for the final comparison.
+    
+    dict1: earlier data, dict2: later data
+    Both expected format: {section: {student_id: {student_data}}}
+    """
+    # Validate inputs are dictionaries
+    if not isinstance(dict1, dict) or not isinstance(dict2, dict):
+        print(f"Error: Invalid data format. Expected dict, got {type(dict1).__name__} and {type(dict2).__name__}")
+        return {}
+    
+    # First, add percentile information to both dictionaries
+    dict1_with_percentiles = analyze_report_output(dict1)
+    dict2_with_percentiles = analyze_report_output(dict2)
+    
     diff = {}
-
-    for section in dict2:
+    
+    for section in dict2_with_percentiles:
         diff[section] = {}
 
         # handle all students that appear in either dictionary
-        all_students = set(dict1.get(section, {}).keys()) | set(dict2.get(section, {}).keys())
+        all_students = set(dict1_with_percentiles.get(section, {}).keys()) | set(dict2_with_percentiles.get(section, {}).keys())
 
         for student_id in all_students:
             diff[section][student_id] = {}
 
-            stud1 = dict1.get(section, {}).get(student_id)
-            stud2 = dict2.get(section, {}).get(student_id)
+            stud1 = dict1_with_percentiles.get(section, {}).get(student_id)
+            stud2 = dict2_with_percentiles.get(section, {}).get(student_id)
 
             # If student not present in both -> invalid
             if not stud1 or not stud2:
                 diff[section][student_id]["status"] = "invalid"
+                diff[section][student_id]["last_name"] = stud2.get("last_name") if stud2 else stud1.get("last_name")
+                diff[section][student_id]["first_name"] = stud2.get("first_name") if stud2 else stud1.get("first_name")
                 continue
 
             # Copy identifying fields
@@ -642,19 +660,26 @@ def improvements_output(dict1, dict2):
 
             # Compute numeric differences for each score-related key
             for key, val2 in stud2.items():
-                if key in ["last_name", "first_name", "status"]:
+                if key in ["last_name", "first_name", "status", "letter_grade", "percentile", "rating"]:
                     continue
 
                 val1 = stud1.get(key)
                 if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
                     diff_val = val2 - val1
-                    diff[section][student_id][key] = f"{'+' if diff_val > 0 else ''}{diff_val}"
+                    diff[section][student_id][key] = round(diff_val, 2)
                 else:
                     # For non-numeric or missing fields, just copy the latest value
                     diff[section][student_id][key] = None
 
+            # Add status, letter grade, and percentile information from dict2 (latest data)
             diff[section][student_id]["status"] = "valid"
             diff[section][student_id]["letter_grade"] = stud2.get("letter_grade")
+            diff[section][student_id]["rating"] = stud2.get("rating", stud2.get("letter_grade"))
+            
+            # Calculate percentile difference
+            percentile1 = stud1.get("percentile", 0) if stud1.get("percentile") else 0
+            percentile2 = stud2.get("percentile", 0) if stud2.get("percentile") else 0
+            diff[section][student_id]["percentile"] = round(percentile2 - percentile1, 2)
 
     return diff
 

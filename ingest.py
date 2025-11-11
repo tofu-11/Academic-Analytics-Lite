@@ -12,13 +12,17 @@ data_dir.mkdir(exist_ok=True)
 file_list = []
 folder = Path(data_dir)
 for file in folder.iterdir():
-    file_list.append(file)
+    # Only add CSV files to the list
+    if file.is_file() and file.suffix.lower() == '.csv':
+        file_list.append(file)
 
 def list_files():
     i = 1
     for file in folder.iterdir():
-        print(i, ". ", file.name)
-        i += 1
+        # Only list CSV files
+        if file.is_file() and file.suffix.lower() == '.csv':
+            print(i, ". ", file.name)
+            i += 1
 
 def load_students_csv(file_name):
     """Reads a CSV file of students and returns a dictionary grouped by section."""
@@ -75,8 +79,13 @@ def load_students_csv(file_name):
     return student_rec
 
 def list_sections(file):
-    student_rec = load_students_csv(file)
-    section_list = []
-    for sec in student_rec.keys():
-        section_list.append(sec)
-    return section_list
+    """Get list of sections from a CSV file"""
+    try:
+        student_rec = load_students_csv(file)
+        section_list = []
+        for sec in student_rec.keys():
+            section_list.append(sec)
+        return section_list
+    except Exception as e:
+        print(f"Error reading sections from file: {e}")
+        return []
