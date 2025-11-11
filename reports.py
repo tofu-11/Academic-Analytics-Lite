@@ -5,6 +5,49 @@
 import analyze
 import transform
 from ingest import load_students_csv
+import matplotlib.pyplot as plt
+
+import matplotlib.pyplot as plt
+
+def plot_final_grades(section_data, section_name="Section"):
+    """
+    section_data: dict of students for a specific section
+    section_name: optional, used for title
+    """
+    # Collect all final grades
+    final_grades = [student['final_grade'] for student in section_data.values()]
+
+    # Plot histogram
+    plt.hist(final_grades, bins=10, color='skyblue', edgecolor='black')
+    plt.title(f"Final Grades Distribution - {section_name}")
+    plt.xlabel("Final Grade")
+    plt.ylabel("Number of Students")
+    plt.show()
+
+def plot_all_final_grades(data_record):
+    """
+    data_record: dict structured as {section_name: {student_id: {....}}}
+    Collects final grades from all sections and plots a histogram.
+    """
+    final_grades = []
+
+    # Iterate through all sections and students
+    for section, students in data_record.items():
+        for student_id, student_data in students.items():
+            if 'final_grade' in student_data:  # safety check
+                final_grades.append(student_data['final_grade'])
+
+    if not final_grades:
+        print("No final grades found in the data.")
+        return
+
+    # Plot histogram
+    plt.hist(final_grades, bins=10, color='lightgreen', edgecolor='black')
+    plt.title("Final Grades Distribution - All Sections")
+    plt.xlabel("Final Grade")
+    plt.ylabel("Number of Students")
+    plt.show()
+
 
 def analysis_report_output(file_path):
     try:
@@ -82,6 +125,32 @@ def analysis_report_output(file_path):
         print(f"Error in analysis_report_output: {e}")
         import traceback
         traceback.print_exc()
+    while True:
+        print("1. View Histogram of a Section\n2. View Histogram of all Sections\n3.Exit")
+        user = input("\n")
+        if user == "1":
+            print("Please choose a section")
+            i = 1
+            for section in data_record.keys():
+                print(i, ". ", section)
+                i += 1
+            while True:
+                choice = int(input())
+                if choice > len(data_record.keys()) or choice <= 0:
+                    print("Please choose a proper number!")
+                else:
+                    break
+            section_name = list(data_record.keys())[choice-1]
+            plot_final_grades(data_record[section_name], section_name)
+        elif user == "3":
+            break
+        elif user == "2":
+            plot_all_final_grades(data_record)
+        else:
+            print("Please choose a proper number!")
+                
+
+
 
 def compare_output(section_choices, file_path=None):
     if not section_choices:
