@@ -4,8 +4,9 @@ This program imports CSV files of student records from multiple class sections. 
 
 ## Program Requirements
 - Python 3.10 or higher
-- matplotlib
+- matplotlib module
 - csv (standard library)
+- numpy module
 
 ---
 
@@ -22,6 +23,8 @@ This program imports CSV files of student records from multiple class sections. 
 ---
 
 ## 🧭 Features
+
+### Uses Nympy for Statistics
 
 ### 📁 Automatic Folder Creation
 - Automatically creates a folder in the program directory where the user can place CSV files for analysis.
@@ -61,3 +64,15 @@ This program imports CSV files of student records from multiple class sections. 
 2. **Run the program:**
    ```bash
    python main.py
+
+## Configurable in config.json
+- Folder name
+- File extension
+- CSV field mapping
+- Grading weights
+- Letter grade thresholds
+- Quiz/Exam max scores
+
+## Final Notes
+- This program is available for contributions through this GitHub repo: https://github.com/tofu-11/Academic-Analytics-Lite
+- If you do not know how to code, you may send recommendations, feedback, or concerns through my email: jedidiahishi@gmail.com
