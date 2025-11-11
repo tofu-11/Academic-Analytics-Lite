@@ -16,9 +16,10 @@ while True:
         print("2. Produce Report & Analysis")
         print("3. Compare")
         print("4. View Improvements")
-        print("5. Exit")
+        print("5. Export per Section")
+        print("6. Exit")
 
-        choice = input("\nEnter your choice (1-5): ")
+        choice = input("\nEnter your choice (1-6): ")
 
         if choice == "1":
             ingest.list_files()
@@ -41,24 +42,59 @@ while True:
                 for j in range(len(section_list)):
                     print(j+1, ". ", section_list[j])
                 print("Type 0 if done.")
-                sec_choice = int(input())
-                if sec_choice != 0:
-                    section_choice.append(section_list[sec_choice-1])
-                else:
+                try:
+                    sec_choice = int(input())
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+                    continue
+                if sec_choice == 0:
                     break
+                if sec_choice < 1 or sec_choice > len(section_list):
+                    print("Choice out of range. Try again.")
+                    continue
+                selected = section_list[sec_choice-1]
+                if selected in section_choice:
+                    print("You've already selected that section. Choose a different one.")
+                    continue
+                section_choice.append(selected)
             reports.compare_output(section_choice, file_list[num-1])
         
         elif choice == "4":
             file_choice = []
             print("Please choose two files to view improvements: ")
-            for i in range(2):
+            chosen_indices = set()
+            while len(file_choice) < 2:
                 ingest.list_files()
-                num = int(input())
+                try:
+                    num = int(input())
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+                    continue
+                if num < 1 or num > len(file_list):
+                    print("Choice out of range. Try again.")
+                    continue
+                if num in chosen_indices:
+                    print("You've already chosen that file. Please pick a different file.")
+                    continue
+                chosen_indices.add(num)
                 file_choice.append(file_list[num-1])
             
             reports.improvement_output(file_choice)
             
         elif choice == "5":
+            print("Please choose a file to export per-section statistics: ")
+            ingest.list_files()
+            try:
+                num = int(input())
+            except ValueError:
+                print("Invalid input. Please enter a number.")
+                continue
+            if num < 0 or num > len(file_list):
+                print("Choice out of range. Try again.")
+                continue
+            reports.export_per_section(file_list[num-1])
+            
+        elif choice == "6":
             print("\nExiting program... Goodbye!")
             break
         else:

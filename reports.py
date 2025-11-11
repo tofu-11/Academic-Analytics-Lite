@@ -5,6 +5,9 @@
 import analyze
 import transform
 from ingest import load_students_csv
+from settings import CONFIG
+from pathlib import Path
+import csv
 import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
@@ -23,6 +26,57 @@ def plot_final_grades(section_data, section_name="Section"):
     plt.xlabel("Final Grade")
     plt.ylabel("Number of Students")
     plt.show()
+
+
+def _export_atrisk_to_csv(atrisk_students):
+    """
+    Export at-risk students to a CSV file in the data directory.
+    If the file exists, append new students; otherwise create it.
+    
+    CSV columns: student_id, last_name, first_name, final_grade, rating, percentile, status
+    """
+    if not atrisk_students:
+        return
+    
+    base_dir = Path.cwd()
+    data_dir = base_dir / CONFIG.get("data_dir", "LMS Files")
+    atrisk_path = data_dir / "at-risk.csv"
+    
+    try:
+        # Check if file exists to determine if we need to write headers
+        file_exists = atrisk_path.exists()
+        
+        with open(atrisk_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            
+            # Write headers if file is new
+            if not file_exists:
+                writer.writerow([
+                    'student_id',
+                    'last_name',
+                    'first_name',
+                    'final_grade',
+                    'rating',
+                    'percentile',
+                    'status'
+                ])
+            
+            # Write each at-risk student
+            for student in atrisk_students:
+                writer.writerow([
+                    student['student_id'],
+                    student['last_name'],
+                    student['first_name'],
+                    student['final_grade'],
+                    student['rating'],
+                    student['percentile'],
+                    student['status']
+                ])
+        
+        print(f"\n✓ At-risk students exported to: {atrisk_path}")
+    
+    except Exception as e:
+        print(f"\n✗ Error exporting at-risk students: {e}")
 
 def plot_all_final_grades(data_record):
     """
@@ -74,6 +128,8 @@ def analysis_report_output(file_path):
             print("|   STUDENT ID    |   LAST NAME   |     FIRST NAME     | FINAL GRADE | RATING |  PERCENTILE  | STATUS |\n")
             print(table_separator)
             
+            # Collect at-risk students for CSV export
+            atrisk_students = []
             for student_id, student in student_list.items():
                 if student['final_grade'] < 75:
                     print(f"|{student_id:^17}|"
@@ -84,6 +140,18 @@ def analysis_report_output(file_path):
                           f"{student['percentile']:^14}|"
                           f"{student['status']:^8}|\n")
                     print(table_separator)
+                    atrisk_students.append({
+                        'student_id': student_id,
+                        'last_name': student['last_name'],
+                        'first_name': student['first_name'],
+                        'final_grade': student['final_grade'],
+                        'rating': student['letter_grade'],
+                        'percentile': student['percentile'],
+                        'status': student['status']
+                    })
+            
+            # Export at-risk students to CSV
+            _export_atrisk_to_csv(atrisk_students)
 
         def section_statistics(section_record, section_name):
             table_separator = (f"{' ______ ________ ______ _________ _________ ____________________ '}\n")
@@ -255,3 +323,102 @@ def improvement_output(file_choices):
         print(f"Error in improvement_output: {e}")
         import traceback
         traceback.print_exc()
+
+
+def export_per_section(file_path):
+    """
+    Analyze a CSV file and export per-section statistics to individual CSV files.
+    
+    For each section in the file:
+      - Compute: mean, median, mode, min, max, standard_deviation of final grades
+      - Write to CSV: <section_name>.csv with columns:
+        section_name, student_population, mean, median, mode, minimum, maximum, standard_deviation
+    
+    Output files are written to the data directory (CONFIG['data_dir']).
+    """
+    try:
+        # Load and transform the data
+        data = transform.main(file_path)
+        if not data:
+            print("Error: No data to analyze")
+            return
+        
+        data_record = analyze.analyze_report_output(data)
+        
+        # Output directory
+        base_dir = Path.cwd()
+        data_dir = base_dir / CONFIG.get("data_dir", "LMS Files")
+        
+        # For each section, compute stats and export
+        for section_name, students in data_record.items():
+            # Extract final grades (only valid ones)
+            final_grades = [
+                s.get('final_grade') 
+                for s in students.values() 
+                if s.get('final_grade') is not None
+            ]
+            
+            if not final_grades:
+                print(f"Warning: Section '{section_name}' has no valid grades. Skipping.")
+                continue
+            
+            # Compute statistics
+            final_grades.sort()
+            student_count = len(final_grades)
+            mean_val = round(sum(final_grades) / student_count, 2)
+            median_val = round(final_grades[student_count // 2], 2)
+            
+            # Mode (most common grade; if tie, take first)
+            from collections import Counter
+            grade_counts = Counter(final_grades)
+            mode_val = round(grade_counts.most_common(1)[0][0], 2)
+            
+            min_val = round(min(final_grades), 2)
+            max_val = round(max(final_grades), 2)
+            
+            # Standard deviation
+            if student_count > 1:
+                variance = sum((g - mean_val) ** 2 for g in final_grades) / (student_count - 1)
+                std_dev = round(variance ** 0.5, 2)
+            else:
+                std_dev = 0.0
+            
+            # Write CSV
+            safe_section_name = section_name.replace('/', '_').replace('\\', '_').strip()
+            output_path = data_dir / f"{safe_section_name}.csv"
+            
+            try:
+                with open(output_path, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([
+                        'section_name',
+                        'student_population',
+                        'mean',
+                        'median',
+                        'mode',
+                        'minimum',
+                        'maximum',
+                        'standard_deviation'
+                    ])
+                    writer.writerow([
+                        section_name,
+                        student_count,
+                        mean_val,
+                        median_val,
+                        mode_val,
+                        min_val,
+                        max_val,
+                        std_dev
+                    ])
+                
+                print(f"✓ Exported: {output_path}")
+            except Exception as e:
+                print(f"✗ Error writing {output_path}: {e}")
+        
+        print("\nExport complete!")
+    
+    except Exception as e:
+        print(f"Error in export_per_section: {e}")
+        import traceback
+        traceback.print_exc()
+

@@ -1,4 +1,37 @@
-
 {
-  "data_dir": "LMS Files"
+  "data_dir": "LMS Files",
+  "file_extensions": [".csv"],
+  "csv": {
+    "encoding": "utf-8",
+    "field_mapping": {
+      "quiz1": "quiz_1",
+      "quiz2": "quiz_2",
+      "quiz3": "quiz_3",
+      "quiz4": "quiz_4",
+      "quiz5": "quiz_5",
+      "midterm": "midterm",
+      "final": "final_exam",
+      "attendance_percent": "attendance"
+    }
+  },
+  "grading": {
+    "weights": {
+      "quiz": 0.5,
+      "midterm": 0.2,
+      "final_exam": 0.2,
+      "attendance": 0.1
+    },
+    "quiz_max_score": 20,
+    "midterm_max_score": 100,
+    "final_max_score": 100,
+    "missing_data_policy": "mark_invalid"
+  },
+  "letter_grade_thresholds": {
+    "S": 97,
+    "A": 90,
+    "B": 85,
+    "C": 75,
+    "D": 70,
+    "F": 0
+  }
 }

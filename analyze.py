@@ -366,19 +366,34 @@ def apply_curve(student_records, target_average=75):
         
         student['curved_grade'] = round(curved, 2)
         
-        # Recalculate each letter grade
-        if curved >= 97:
-            student['curved_letter'] = 'S'
-        elif curved >= 90:
-            student['curved_letter'] = 'A'
-        elif curved >= 85:
-            student['curved_letter'] = 'B'
-        elif curved >= 75:
-            student['curved_letter'] = 'C'
-        elif curved >= 70:
-            student['curved_letter'] = 'D'
-        else:
-            student['curved_letter'] = 'F'
+        # Recalculate each letter grade using centralized thresholds if available
+        try:
+            from settings import CONFIG
+            thresholds = CONFIG.get('letter_grade_thresholds', {})
+            sorted_thresholds = sorted(thresholds.items(), key=lambda kv: kv[1], reverse=True)
+            letter = 'F'
+            for lt, cutoff in sorted_thresholds:
+                try:
+                    if curved >= float(cutoff):
+                        letter = lt
+                        break
+                except Exception:
+                    continue
+            student['curved_letter'] = letter
+        except Exception:
+            # Fallback to original hardcoded bands
+            if curved >= 97:
+                student['curved_letter'] = 'S'
+            elif curved >= 90:
+                student['curved_letter'] = 'A'
+            elif curved >= 85:
+                student['curved_letter'] = 'B'
+            elif curved >= 75:
+                student['curved_letter'] = 'C'
+            elif curved >= 70:
+                student['curved_letter'] = 'D'
+            else:
+                student['curved_letter'] = 'F'
     
     return student_records
 
@@ -479,19 +494,33 @@ def apply_curve_numpy(student_records, target_average=75):
             curved = float(curved_grades[i])
             student['curved_grade'] = round(curved, 2)
             
-            # Letter grade
-            if curved >= 97:
-                student['curved_letter'] = 'S'
-            elif curved >= 90:
-                student['curved_letter'] = 'A'
-            elif curved >= 85:
-                student['curved_letter'] = 'B'
-            elif curved >= 75:
-                student['curved_letter'] = 'C'
-            elif curved >= 70:
-                student['curved_letter'] = 'D'
-            else:
-                student['curved_letter'] = 'F'
+            # Letter grade using thresholds from config when available
+            try:
+                from settings import CONFIG
+                thresholds = CONFIG.get('letter_grade_thresholds', {})
+                sorted_thresholds = sorted(thresholds.items(), key=lambda kv: kv[1], reverse=True)
+                letter = 'F'
+                for lt, cutoff in sorted_thresholds:
+                    try:
+                        if curved >= float(cutoff):
+                            letter = lt
+                            break
+                    except Exception:
+                        continue
+                student['curved_letter'] = letter
+            except Exception:
+                if curved >= 97:
+                    student['curved_letter'] = 'S'
+                elif curved >= 90:
+                    student['curved_letter'] = 'A'
+                elif curved >= 85:
+                    student['curved_letter'] = 'B'
+                elif curved >= 75:
+                    student['curved_letter'] = 'C'
+                elif curved >= 70:
+                    student['curved_letter'] = 'D'
+                else:
+                    student['curved_letter'] = 'F'
     
     return student_records
 
