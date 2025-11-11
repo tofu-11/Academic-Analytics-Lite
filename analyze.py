@@ -11,7 +11,7 @@ FEATURES:
 4 - Improvements (compare 2 CSV files by DATE)
 5 - Bell Curve (STRETCH FEATURE)
 6 - NumPy optimized versions (STRETCH FEATURE)
-6 - Compare (WIP)
+7 - Compare (WIP)
 
 NOTE: This part (analyze.py) ONLY returns analyzed data.
       reports.py is the one that handles plotting/visualization(output).
@@ -85,7 +85,7 @@ def get_score_ranges(student_records):
 
 def percentile_of_score(scores, target_score):
     """
-    Returns the percentile rank of a specific score in a list of scores.
+    D: Returns the percentile rank of a specific score in a list of scores.
     
     Percentile rank = percentage of scores less than or equal to the target.
     """
@@ -102,7 +102,7 @@ def percentile_of_score(scores, target_score):
 
 def calculate_percentile(student_records, percentile):
     """
-    Find the score at a given percentile.
+    D: Find the score at a given percentile.
     Example: percentile=75 means 75% of students scored below this.
     
     REQUIRES: student_records from transform.py with 'final_grade' key -> carlos
@@ -132,7 +132,7 @@ def calculate_percentile(student_records, percentile):
 
 def get_common_percentiles(student_records):
     """
-    Get 25th, 50th (median), and 75th percentiles.
+    D: Get 25th, 50th (median), and 75th percentiles.
     
     REQUIRES: student_records from transform.py with 'final_grade' key -> carlso branch
     RETURNS: dict with Q1, Median, Q3
@@ -337,7 +337,7 @@ def get_improvement_by_section(comparison_result):
 def apply_curve(student_records, target_average=75):
     """
     D: apply bell curve to adjust grades so class average = target_average.
-    usingses simple additive curve: adds/subtracts same amount to all grades.
+    using simple additive curve: adds/subtracts same amount to all grades.
     
     REQUIRES: student_records from transform.py with 'final_grade' key -> carlos branch
     RETURNS: student_records with added 'curved_grade' and 'curved_letter' keys -> gives the info to cris branch
@@ -434,7 +434,7 @@ def get_basic_stats_numpy(section, section_name):
     """
     D: calculate statistics using NumPy (faster for large datasets if we have a lot of students).
     
-    REQUIRES: ⚠️⚠️NumPy installed⚠️⚠️ <---, student_records with 'final_grade'
+    REQUIRES: NumPy installed <---, student_records with 'final_grade'
     RETURNS: dict with mean, median, std, min, max, Q1, Q3
     """
     
@@ -470,7 +470,7 @@ def apply_curve_numpy(student_records, target_average=75):
     RETURNS: student_records with 'curved_grade' and 'curved_letter'
     """
     if not NUMPY_AVAILABLE:
-        print("⚠️ NumPy not available. Using standard version instead.")
+        print(" NumPy not available. Using standard version instead.")
         return apply_curve(student_records, target_average)
     
     # Extract grades as numpy array
